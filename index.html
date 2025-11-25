@@ -70,12 +70,15 @@
             position: relative;
             cursor: pointer;
             text-align: center;
+            /* منع الصورة من السحب */
+            -webkit-user-drag: none;
         }
 
         #cat-img {
             width: 350px;
             height: auto;
-            display: block; 
+            display: block;
+            pointer-events: none; /* عشان الضغط يجي عالكونتينر مش الصورة */
         }
 
         /* قائمة المتصدرين */
@@ -115,6 +118,10 @@
 
         /* مؤشر التحميل */
         #loading { font-size: 0.9rem; color: #888; margin-top: 10px; }
+        
+        /* إخفاء شريط التمرير للقائمة */
+        #leaderboard::-webkit-scrollbar { width: 6px; }
+        #leaderboard::-webkit-scrollbar-thumb { background-color: #ccc; border-radius: 10px; }
 
     </style>
 </head>
@@ -141,15 +148,14 @@
     <img src="https://i.redd.it/8btmhq88z5s71.jpg" style="display:none;" alt="preload">
 
     <script type="module">
-        // 1. استيراد مكتبات فايربيس من الإنترنت
+        // 1. استيراد مكتبات فايربيس
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
         import { getDatabase, ref, set, onValue, get, child } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-        // 2. إعدادات مشروعك (تم نسخها من بياناتك)
+        // 2. إعدادات مشروعك
         const firebaseConfig = {
             apiKey: "AIzaSyAIaiJoZMXLlcZaHDjzEvLw_CpqrB_3qjY",
             authDomain: "test-ae3a8.firebaseapp.com",
-            // ملاحظة: قمت بإضافة رابط الداتابيس يدوياً بناءً على اسم مشروعك
             databaseURL: "https://test-ae3a8-default-rtdb.firebaseio.com",
             projectId: "test-ae3a8",
             storageBucket: "test-ae3a8.firebasestorage.app",
@@ -172,14 +178,14 @@
         
         loadingText.innerText = "السيستم جاهز! اكتب اسمك.";
 
-        // الصوت
-        const audioSrc = "file:///C:/Users/actc/OneDrive/Desktop/office/pop-402324.mp3";
+        // --- إعداد الصوت الجديد ---
+        const audioSrc = "https://files.catbox.moe/vfo4tp.mp3";
         const audio = new Audio(audioSrc);
 
         // --- دالة بدء اللعبة ---
         window.startGame = function() {
             const inputName = document.getElementById('nickname-input').value.trim();
-            // تنظيف الاسم من الرموز التي لا تقبلها الداتابيس
+            // تنظيف الاسم (يمنع الرموز اللي تخرب الداتابيس)
             const safeName = inputName.replace(/[.#$/\[\]]/g, ""); 
 
             if (safeName === "") {
@@ -190,14 +196,13 @@
             loadingText.innerText = "جاري جلب بياناتك...";
             currentUser = safeName;
 
-            // البحث عن اللاعب في السيرفر
+            // جلب السكور القديم إذا اللاعب موجود
             const dbRef = ref(getDatabase());
             get(child(dbRef, `players/${currentUser}`)).then((snapshot) => {
                 if (snapshot.exists()) {
                     currentScore = snapshot.val().score;
                 } else {
                     currentScore = 0;
-                    // إنشاء لاعب جديد في السيرفر
                     set(ref(db, 'players/' + currentUser), {
                         name: currentUser,
                         score: 0
@@ -209,12 +214,15 @@
                 loginScreen.style.display = "none";
             }).catch((error) => {
                 console.error(error);
-                alert("تأكد من الإنترنت أو إعدادات Rules في فايربيس");
+                alert("تأكد من الإنترنت");
             });
         };
 
-        // ربط زر الدخول
+        // ربط زر الدخول وانتر
         document.getElementById('btn-start').addEventListener('click', window.startGame);
+        document.getElementById('nickname-input').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') window.startGame();
+        });
 
         // --- ميكانيكا اللعب ---
         function openMouth() {
@@ -224,11 +232,11 @@
             scoreBoard.innerText = currentScore;
             catImg.src = "https://i.redd.it/8btmhq88z5s71.jpg";
             
+            // تشغيل الصوت (مع إعادة التعيين للصفر للتكرار السريع)
             audio.currentTime = 0;
             audio.play().catch(e => {});
 
-            // تحديث السيرفر (نرسل السكور الجديد)
-            // نستخدم set لحفظ القيمة
+            // حفظ السكور في السيرفر
             set(ref(db, 'players/' + currentUser), {
                 name: currentUser,
                 score: currentScore
@@ -239,7 +247,7 @@
             catImg.src = "https://media.tenor.com/14kAeUwtoJoAAAAe/pop-cat.png";
         }
 
-        // --- الاستماع للتغييرات في الليدر بورد (Realtime) ---
+        // --- تحديث الليدر بورد تلقائياً ---
         const leaderboardList = document.getElementById('leaderboard-list');
         const playersRef = ref(db, 'players');
         
@@ -247,7 +255,6 @@
             const data = snapshot.val();
             if (!data) return;
 
-            // تحويل البيانات لمصفوفة وترتيبها
             let playersArray = [];
             for (let key in data) {
                 playersArray.push(data[key]);
@@ -256,7 +263,7 @@
             // الترتيب من الأكبر للأصغر
             playersArray.sort((a, b) => b.score - a.score);
 
-            // رسم القائمة
+            // عرض القائمة
             leaderboardList.innerHTML = "";
             playersArray.slice(0, 50).forEach((player, index) => {
                 const row = document.createElement('div');
@@ -276,19 +283,19 @@
             });
         });
 
-        // --- الأحداث (Touch/Mouse) ---
-        document.addEventListener("mousedown", (e) => {
-            if(e.target.closest('#login-screen') || e.target.closest('#leaderboard')) return;
+        // --- أحداث اللمس والماوس ---
+        // استخدام 'pointerdown' لأنه يدعم الماوس واللمس معاً بشكل أسرع
+        const catZone = document.getElementById('cat-zone');
+        
+        catZone.addEventListener("pointerdown", (e) => {
+            e.preventDefault(); // يمنع التظليل
             openMouth();
         });
-        document.addEventListener("mouseup", closeMouth);
 
-        document.addEventListener("touchstart", function(e) {
-             if(e.target.closest('#login-screen') || e.target.closest('#leaderboard')) return;
-            e.preventDefault();
-            openMouth();
-        }, {passive: false});
-        document.addEventListener("touchend", closeMouth);
+        document.addEventListener("pointerup", closeMouth);
+        // للحماية من الحالات التي يخرج فيها الماوس من الشاشة
+        document.addEventListener("pointercancel", closeMouth); 
+        document.addEventListener("pointerleave", closeMouth);
 
     </script>
 </body>
