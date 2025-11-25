@@ -32,9 +32,9 @@
             color: white;
         }
 
-        input[type="text"], select {
+        input[type="text"], input[type="password"], select {
             padding: 15px;
-            font-size: 1.5rem;
+            font-size: 1.2rem;
             border-radius: 10px;
             border: none;
             text-align: center;
@@ -89,7 +89,7 @@
             background: rgba(255, 255, 255, 0.9);
             padding: 15px;
             border-radius: 15px;
-            width: 280px; /* زيادة العرض قليلاً للأعلام */
+            width: 280px;
             box-shadow: 0 5px 15px rgba(0,0,0,0.2);
             max-height: 80vh;
             overflow-y: auto;
@@ -118,10 +118,39 @@
         .flag { margin-left: 5px; font-size: 1.2rem; }
         .score { color: #555; margin-right: 5px;}
 
+        /* الزر السري */
+        #secret-btn {
+            position: absolute;
+            bottom: 10px;
+            opacity: 0.3; /* شفاف قليلاً حتى لا يلفت الانتباه */
+            background: transparent;
+            border: 1px solid #555;
+            color: #333;
+            font-size: 0.8rem;
+            cursor: pointer;
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+        #secret-btn:hover { opacity: 1; background: #fff; }
+
+        /* بانل الباسوورد */
+        #secret-panel {
+            display: none; /* مخفي افتراضياً */
+            position: fixed;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            background: #333;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            text-align: center;
+            z-index: 200;
+        }
+        #secret-panel h4 { color: red; margin-top: 0; }
+
         /* مؤشر التحميل */
         #loading { font-size: 0.9rem; color: #888; margin-top: 10px; }
         
-        /* سكرول بار */
         #leaderboard::-webkit-scrollbar { width: 6px; }
         #leaderboard::-webkit-scrollbar-thumb { background-color: #ccc; border-radius: 10px; }
 
@@ -131,7 +160,6 @@
 
     <div id="login-screen">
         <h1>Pop Cat Online 🌍</h1>
-        
         <select id="flag-select">
             <option value="🇵🇸">🇵🇸 فلسطين</option>
             <option value="🇯🇴">🇯🇴 الأردن</option>
@@ -153,7 +181,6 @@
             <option value="🇾🇪">🇾🇪 اليمن</option>
             <option value="🌍">🌍 أخرى</option>
         </select>
-
         <input type="text" id="nickname-input" placeholder="اكتب اسمك..." maxlength="12">
         <button class="start-btn" id="btn-start">دخول</button>
         <div id="loading">جاري الاتصال بالسيرفر...</div>
@@ -169,6 +196,16 @@
     <div class="cat-container" id="cat-zone">
         <img id="cat-img" src="https://media.tenor.com/14kAeUwtoJoAAAAe/pop-cat.png" alt="Pop Cat">
     </div>
+    
+    <button id="secret-btn" onclick="toggleSecret()">سري جداً</button>
+    
+    <div id="secret-panel">
+        <h4>⚠️ منطقة محظورة ⚠️</h4>
+        <input type="password" id="secret-pass" placeholder="كلمة السر">
+        <br>
+        <button class="start-btn" onclick="activateHack()" style="font-size: 1rem; padding: 5px 20px;">تفعيل</button>
+        <button class="start-btn" onclick="toggleSecret()" style="font-size: 1rem; padding: 5px 20px; background: #555;">إلغاء</button>
+    </div>
 
     <img src="https://i.redd.it/8btmhq88z5s71.jpg" style="display:none;" alt="preload">
 
@@ -176,7 +213,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
         import { getDatabase, ref, set, onValue, get, child } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-        // إعدادات فايربيس (نفس إعداداتك)
+        // إعدادات فايربيس
         const firebaseConfig = {
             apiKey: "AIzaSyAIaiJoZMXLlcZaHDjzEvLw_CpqrB_3qjY",
             authDomain: "test-ae3a8.firebaseapp.com",
@@ -192,8 +229,9 @@
         const db = getDatabase(app);
         
         let currentUser = "";
-        let currentFlag = "🌍"; // العلم الافتراضي
+        let currentFlag = "🌍";
         let currentScore = 0;
+        let clickMultiplier = 1; // القوة الافتراضية للضغطة
         
         const scoreBoard = document.getElementById('score-board');
         const catImg = document.getElementById('cat-img');
@@ -204,6 +242,32 @@
 
         const audioSrc = "https://files.catbox.moe/vfo4tp.mp3";
         const audio = new Audio(audioSrc);
+
+        // --- دوال المنطقة السرية (Global Scope) ---
+        window.toggleSecret = function() {
+            const panel = document.getElementById('secret-panel');
+            if (panel.style.display === 'block') {
+                panel.style.display = 'none';
+            } else {
+                panel.style.display = 'block';
+            }
+        };
+
+        window.activateHack = function() {
+            const pass = document.getElementById('secret-pass').value;
+            if (pass === "ARPS3MK") {
+                clickMultiplier = 1000;
+                alert("تم تفعيل الوضع الخارق! 🚀\nكل ضغطة = 1000 نقطة");
+                document.getElementById('secret-panel').style.display = 'none';
+                document.getElementById('secret-pass').value = ""; // مسح الباسوورد
+                
+                // تغيير لون السكور للدلالة على القوة
+                scoreBoard.style.color = "#ffdd00"; 
+                scoreBoard.style.textShadow = "0 0 20px #ff0000";
+            } else {
+                alert("كلمة السر غلط! ❌");
+            }
+        };
 
         // --- دالة بدء اللعبة ---
         window.startGame = function() {
@@ -225,7 +289,6 @@
             get(child(dbRef, `players/${currentUser}`)).then((snapshot) => {
                 if (snapshot.exists()) {
                     currentScore = snapshot.val().score;
-                    // تحديث العلم في قاعدة البيانات في حال غيره اللاعب
                     set(ref(db, 'players/' + currentUser), {
                         name: currentUser,
                         score: currentScore,
@@ -257,14 +320,15 @@
         function openMouth() {
             if (!currentUser) return;
 
-            currentScore++;
+            // هنا السحر: زيادة السكور حسب المضاعف
+            currentScore += clickMultiplier;
+            
             scoreBoard.innerText = currentScore;
             catImg.src = "https://i.redd.it/8btmhq88z5s71.jpg";
             
             audio.currentTime = 0;
             audio.play().catch(e => {});
 
-            // إرسال البيانات للسيرفر (الاسم + السكور + العلم)
             set(ref(db, 'players/' + currentUser), {
                 name: currentUser,
                 score: currentScore,
@@ -301,7 +365,6 @@
                 else if (index === 1) rankDisplay = "🥈";
                 else if (index === 2) rankDisplay = "🥉";
 
-                // التأكد من وجود علم، إذا لم يوجد نضع علم أبيض
                 const playerFlag = player.flag || "🏳️";
 
                 row.innerHTML = `
@@ -319,6 +382,8 @@
         const catZone = document.getElementById('cat-zone');
         catZone.addEventListener("pointerdown", (e) => {
             e.preventDefault();
+            // منع الضغط إذا كان الزر السري مفتوحاً لتجنب التداخل
+            if(document.getElementById('secret-panel').style.display === 'block') return;
             openMouth();
         });
         document.addEventListener("pointerup", closeMouth);
