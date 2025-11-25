@@ -1,11 +1,249 @@
 <!DOCTYPE html>
 <html lang="ar">
 <head>
-  <meta charset="UTF-8">
-  <title>أول موقع لي</title>
+  <meta charset="UTF-8" />
+  <title>لعبة الثعبان</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      background: #111;
+      color: #f5f5f5;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+
+    h1 {
+      margin-bottom: 10px;
+      text-align: center;
+    }
+
+    #game-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+
+    canvas {
+      border: 2px solid #444;
+      background: #000;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.8);
+    }
+
+    #info {
+      font-size: 14px;
+      text-align: center;
+      opacity: 0.8;
+      line-height: 1.6;
+    }
+
+    #score {
+      font-size: 16px;
+      font-weight: bold;
+    }
+
+    .btn {
+      padding: 6px 14px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-size: 14px;
+      background: #2b8a3e;
+      color: #fff;
+    }
+
+    .btn:hover {
+      filter: brightness(1.1);
+    }
+  </style>
 </head>
 <body>
-  <h1>أهلاً بالعالم 👋</h1>
-  <p>هذا موقعي المجاني على GitHub Pages.</p>
+  <h1>لعبة الثعبان 🐍</h1>
+
+  <div id="game-container">
+    <canvas id="game" width="400" height="400"></canvas>
+    <div id="score">النتيجة: 0</div>
+    <div id="info">
+      تحكم: الأسهم ⬅️ ⬆️ ⬇️ ➡️<br />
+      مسافة (Space) للإيقاف المؤقت / الاستكمال<br />
+      اضغط "إعادة بدء" لبدء لعبة جديدة
+    </div>
+    <button class="btn" id="restart">إعادة بدء</button>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+    const scoreEl = document.getElementById("score");
+    const restartBtn = document.getElementById("restart");
+
+    const box = 20; // حجم الخلية (مربعات الشبكة)
+    let snake;
+    let direction;
+    let food;
+    let score;
+    let gameOver;
+    let isPaused;
+    let gameLoopId;
+
+    // تهيئة اللعبة
+    function initGame() {
+      snake = [{ x: 9 * box, y: 9 * box }]; // بداية الثعبان في منتصف اللوحة تقريباً
+      direction = "RIGHT";
+      score = 0;
+      gameOver = false;
+      isPaused = false;
+      food = randomFood();
+      updateScore();
+      if (gameLoopId) clearInterval(gameLoopId);
+      gameLoopId = setInterval(loop, 120); // سرعة اللعبة (كلما قلّ الرقم زادت السرعة)
+    }
+
+    // توليد طعام في مكان عشوائي
+    function randomFood() {
+      const maxCells = canvas.width / box;
+      return {
+        x: Math.floor(Math.random() * maxCells) * box,
+        y: Math.floor(Math.random() * maxCells) * box,
+      };
+    }
+
+    // تحديث النتيجة على الشاشة
+    function updateScore() {
+      scoreEl.textContent = "النتيجة: " + score;
+    }
+
+    // رسم الخلفية والشبكة
+    function drawBoard() {
+      ctx.fillStyle = "#000";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.strokeStyle = "#222";
+      for (let x = 0; x <= canvas.width; x += box) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, canvas.height);
+        ctx.stroke();
+      }
+      for (let y = 0; y <= canvas.height; y += box) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+      }
+    }
+
+    // رسم الثعبان
+    function drawSnake() {
+      for (let i = 0; i < snake.length; i++) {
+        ctx.fillStyle = i === 0 ? "#4caf50" : "#81c784"; // الرأس أغمق
+        ctx.fillRect(snake[i].x, snake[i].y, box, box);
+
+        ctx.strokeStyle = "#000";
+        ctx.strokeRect(snake[i].x, snake[i].y, box, box);
+      }
+    }
+
+    // رسم الطعام
+    function drawFood() {
+      ctx.fillStyle = "#e53935";
+      ctx.fillRect(food.x, food.y, box, box);
+    }
+
+    // كشف التصادم مع الجسم
+    function collisionWithSelf(head, array) {
+      return array.some(
+        (segment) => segment.x === head.x && segment.y === head.y
+      );
+    }
+
+    // خطوة واحدة من اللعبة (تحديث + رسم)
+    function loop() {
+      drawBoard();
+      drawFood();
+      drawSnake();
+
+      if (gameOver) {
+        ctx.fillStyle = "#fff";
+        ctx.font = "24px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("انتهت اللعبة! اضغط إعادة بدء", canvas.width / 2, canvas.height / 2);
+        return;
+      }
+
+      if (isPaused) {
+        ctx.fillStyle = "#fff";
+        ctx.font = "20px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("متوقف مؤقتاً", canvas.width / 2, canvas.height / 2);
+        return;
+      }
+
+      // حساب موقع الرأس الجديد
+      let head = { ...snake[0] };
+
+      if (direction === "LEFT") head.x -= box;
+      if (direction === "UP") head.y -= box;
+      if (direction === "RIGHT") head.x += box;
+      if (direction === "DOWN") head.y += box;
+
+      // التحقق من الاصطدام بالجدران
+      if (
+        head.x < 0 ||
+        head.x >= canvas.width ||
+        head.y < 0 ||
+        head.y >= canvas.height
+      ) {
+        gameOver = true;
+        return;
+      }
+
+      // التحقق من الاصطدام بالجسم
+      if (collisionWithSelf(head, snake)) {
+        gameOver = true;
+        return;
+      }
+
+      // التحقق من أكل الطعام
+      if (head.x === food.x && head.y === food.y) {
+        score++;
+        updateScore();
+        food = randomFood();
+        // لا نحذف الذيل هنا حتى يطول الثعبان
+      } else {
+        // تحريك الثعبان: إضافة رأس جديد وحذف الذيل
+        snake.pop();
+      }
+
+      // إضافة الرأس في بداية المصفوفة
+      snake.unshift(head);
+    }
+
+    // تغيير الاتجاه باستخدام لوحة المفاتيح
+    document.addEventListener("keydown", function (e) {
+      const key = e.key;
+
+      if (key === "ArrowLeft" && direction !== "RIGHT") direction = "LEFT";
+      else if (key === "ArrowUp" && direction !== "DOWN") direction = "UP";
+      else if (key === "ArrowRight" && direction !== "LEFT") direction = "RIGHT";
+      else if (key === "ArrowDown" && direction !== "UP") direction = "DOWN";
+      else if (key === " " || key === "Spacebar") {
+        // إيقاف/استكمال
+        isPaused = !isPaused;
+      }
+    });
+
+    // زر إعادة البدء
+    restartBtn.addEventListener("click", function () {
+      initGame();
+    });
+
+    // بدء اللعبة عند تحميل الصفحة
+    initGame();
+  </script>
 </body>
 </html>
