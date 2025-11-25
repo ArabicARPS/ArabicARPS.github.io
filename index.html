@@ -89,7 +89,7 @@
             background: rgba(255, 255, 255, 0.9);
             padding: 15px;
             border-radius: 15px;
-            width: 280px;
+            width: 300px; /* زيادة العرض لاستيعاب الجوائز */
             box-shadow: 0 5px 15px rgba(0,0,0,0.2);
             max-height: 80vh;
             overflow-y: auto;
@@ -114,15 +114,17 @@
         }
         
         .rank { width: 30px; }
-        .name { flex-grow: 1; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        /* تنسيق الاسم ليكون مرناً مع الأيقونات */
+        .name-container { flex-grow: 1; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; }
         .flag { margin-left: 5px; font-size: 1.2rem; }
-        .score { color: #555; margin-right: 5px;}
+        .badge { margin-right: 5px; font-size: 1.1rem; } /* تنسيق الشارة */
+        .score { color: #555; margin-right: 5px; font-size: 0.9rem;}
 
         /* الزر السري */
         #secret-btn {
             position: absolute;
             bottom: 10px;
-            opacity: 0.3; /* شفاف قليلاً حتى لا يلفت الانتباه */
+            opacity: 0.3;
             background: transparent;
             border: 1px solid #555;
             color: #333;
@@ -135,7 +137,7 @@
 
         /* بانل الباسوورد */
         #secret-panel {
-            display: none; /* مخفي افتراضياً */
+            display: none;
             position: fixed;
             top: 50%; left: 50%;
             transform: translate(-50%, -50%);
@@ -213,7 +215,6 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
         import { getDatabase, ref, set, onValue, get, child } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-        // إعدادات فايربيس
         const firebaseConfig = {
             apiKey: "AIzaSyAIaiJoZMXLlcZaHDjzEvLw_CpqrB_3qjY",
             authDomain: "test-ae3a8.firebaseapp.com",
@@ -231,7 +232,7 @@
         let currentUser = "";
         let currentFlag = "🌍";
         let currentScore = 0;
-        let clickMultiplier = 1; // القوة الافتراضية للضغطة
+        let clickMultiplier = 1;
         
         const scoreBoard = document.getElementById('score-board');
         const catImg = document.getElementById('cat-img');
@@ -243,7 +244,7 @@
         const audioSrc = "https://files.catbox.moe/vfo4tp.mp3";
         const audio = new Audio(audioSrc);
 
-        // --- دوال المنطقة السرية (Global Scope) ---
+        // --- دوال المنطقة السرية ---
         window.toggleSecret = function() {
             const panel = document.getElementById('secret-panel');
             if (panel.style.display === 'block') {
@@ -259,9 +260,7 @@
                 clickMultiplier = 1000;
                 alert("تم تفعيل الوضع الخارق! 🚀\nكل ضغطة = 1000 نقطة");
                 document.getElementById('secret-panel').style.display = 'none';
-                document.getElementById('secret-pass').value = ""; // مسح الباسوورد
-                
-                // تغيير لون السكور للدلالة على القوة
+                document.getElementById('secret-pass').value = ""; 
                 scoreBoard.style.color = "#ffdd00"; 
                 scoreBoard.style.textShadow = "0 0 20px #ff0000";
             } else {
@@ -269,11 +268,21 @@
             }
         };
 
-        // --- دالة بدء اللعبة ---
+        // --- دالة تحديد الجوائز ---
+        function getRankBadge(score) {
+            if (score >= 1000000) return "👑"; // مليون
+            if (score >= 100000) return "🦁"; // 100 ألف
+            if (score >= 50000) return "💎"; // 50 ألف
+            if (score >= 10000) return "🔥"; // 10 آلاف
+            if (score >= 5000) return "⚡"; // 5 آلاف
+            if (score >= 1000) return "🎖️"; // ألف
+            return ""; // أقل من ألف
+        }
+
+        // --- بدء اللعبة ---
         window.startGame = function() {
             const inputName = document.getElementById('nickname-input').value.trim();
             const selectedFlag = document.getElementById('flag-select').value;
-            
             const safeName = inputName.replace(/[.#$/\[\]]/g, ""); 
 
             if (safeName === "") {
@@ -316,13 +325,11 @@
             if (e.key === 'Enter') window.startGame();
         });
 
-        // --- ميكانيكا اللعب ---
+        // --- اللعب ---
         function openMouth() {
             if (!currentUser) return;
 
-            // هنا السحر: زيادة السكور حسب المضاعف
             currentScore += clickMultiplier;
-            
             scoreBoard.innerText = currentScore;
             catImg.src = "https://i.redd.it/8btmhq88z5s71.jpg";
             
@@ -340,7 +347,7 @@
             catImg.src = "https://media.tenor.com/14kAeUwtoJoAAAAe/pop-cat.png";
         }
 
-        // --- الليدر بورد ---
+        // --- الليدر بورد مع الجوائز ---
         const leaderboardList = document.getElementById('leaderboard-list');
         const playersRef = ref(db, 'players');
         
@@ -366,12 +373,14 @@
                 else if (index === 2) rankDisplay = "🥉";
 
                 const playerFlag = player.flag || "🏳️";
+                const rankBadge = getRankBadge(player.score); // حساب الشارة
 
                 row.innerHTML = `
-                    <div style="display:flex; align-items:center;">
-                        <span class="rank">${rankDisplay}</span>
+                    <div class="name-container">
+                        <span class="rank" style="min-width:25px;">${rankDisplay}</span>
                         <span class="flag">${playerFlag}</span>
-                        <span class="name" style="margin-right:5px;">${player.name}</span>
+                        <span class="name" style="margin-right:5px; margin-left:5px;">${player.name}</span>
+                        <span class="badge">${rankBadge}</span>
                     </div>
                     <span class="score">${player.score}</span>
                 `;
@@ -382,7 +391,6 @@
         const catZone = document.getElementById('cat-zone');
         catZone.addEventListener("pointerdown", (e) => {
             e.preventDefault();
-            // منع الضغط إذا كان الزر السري مفتوحاً لتجنب التداخل
             if(document.getElementById('secret-panel').style.display === 'block') return;
             openMouth();
         });
