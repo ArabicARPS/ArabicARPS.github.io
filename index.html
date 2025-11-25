@@ -55,28 +55,100 @@
       background: #2563eb;
       color: white;
     }
-    button:hover {
+    button:disabled {
+      opacity: 0.6;
+      cursor: default;
+    }
+    button:hover:not(:disabled) {
       opacity: 0.95;
+    }
+    .status {
+      margin-bottom: 12px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      font-size: 14px;
+      text-align: center;
+      display: none;
+    }
+    .status.success {
+      display: block;
+      background: #dcfce7;
+      color: #166534;
+      border: 1px solid #22c55e;
+    }
+    .status.error {
+      display: block;
+      background: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #ef4444;
     }
   </style>
 </head>
 <body>
   <div class="card">
+    <!-- رسالة الحالة -->
+    <div id="status" class="status"></div>
+
     <h1>اكتب لي رسالة</h1>
     <p>اكتب أي كلام تحب توصله لي، ثم اضغط إرسال 👇</p>
 
-    <form action="https://formspree.io/f/xdkvbjpn" method="POST">
+    <form id="contactForm" action="https://formspree.io/f/xdkvbjpn" method="POST">
       <!-- حقل الرسالة فقط -->
       <textarea name="message" placeholder="اكتب رسالتك هنا..." required></textarea>
 
       <!-- عنوان الرسالة اللي يوصل لإيميلك -->
       <input type="hidden" name="_subject" value="رسالة جديدة من الموقع">
 
-      <!-- تقدر توقف صفحة الشكر الافتراضية وتحول لصفحة ثانية لو حاب مستقبلاً -->
-      <!-- <input type="hidden" name="_next" value="https://YOUR-SITE-URL"> -->
-
       <button type="submit">إرسال</button>
     </form>
   </div>
+
+  <script>
+    const form = document.getElementById('contactForm');
+    const statusBox = document.getElementById('status');
+    const button = form.querySelector('button');
+
+    form.addEventListener('submit', async function (e) {
+      e.preventDefault(); // إلغاء التحويل لصفحة الشكر
+
+      // تعطيل الزر أثناء الإرسال
+      button.disabled = true;
+      const originalText = button.textContent;
+      button.textContent = 'جاري الإرسال...';
+
+      // إخفاء أي رسالة سابقة
+      statusBox.className = 'status';
+      statusBox.textContent = '';
+
+      try {
+        const formData = new FormData(form);
+        const response = await fetch(form.action, {
+          method: form.method,
+          body: formData,
+          headers: {
+            'Accept': 'application/json'
+          }
+        });
+
+        if (response.ok) {
+          // نجاح ✅
+          statusBox.textContent = 'تم الإرسال بنجاح ✅';
+          statusBox.classList.add('success');
+          form.reset();
+        } else {
+          // خطأ من السيرفر
+          statusBox.textContent = 'صار خطأ أثناء الإرسال، حاول مرة ثانية.';
+          statusBox.classList.add('error');
+        }
+      } catch (error) {
+        // خطأ في الاتصال
+        statusBox.textContent = 'مشكلة في الاتصال بالإنترنت، حاول مرة ثانية.';
+        statusBox.classList.add('error');
+      } finally {
+        button.disabled = false;
+        button.textContent = originalText;
+      }
+    });
+  </script>
 </body>
 </html>
