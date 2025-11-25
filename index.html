@@ -81,7 +81,7 @@
             pointer-events: none;
         }
 
-        /* --- تنسيق الليدر بورد الجديد (حل المشكلة) --- */
+        /* --- تنسيق الليدر بورد --- */
         #leaderboard {
             position: absolute;
             top: 20px;
@@ -89,7 +89,7 @@
             background: rgba(255, 255, 255, 0.95);
             padding: 15px;
             border-radius: 15px;
-            width: 320px; /* عرض مناسب */
+            width: 320px;
             box-shadow: 0 5px 15px rgba(0,0,0,0.2);
             max-height: 80vh;
             overflow-y: auto;
@@ -99,17 +99,15 @@
 
         #leaderboard h3 { margin: 0 0 15px 0; text-align: center; color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px; }
         
-        /* تصميم السطر الواحد */
         .player-row {
             display: flex;
-            align-items: center; /* توسيط عمودي */
+            align-items: center;
             padding: 10px 5px;
             border-bottom: 1px solid #f0f0f0;
             font-weight: bold;
             font-size: 1rem;
         }
 
-        /* سطر اللاعب الحالي */
         .player-row.current-user {
             color: #d63031;
             background-color: #ffe0e3;
@@ -117,43 +115,12 @@
             border: 1px solid #ff7675;
         }
 
-        /* 1. العمود الأيمن: الترتيب */
-        .rank-col {
-            width: 30px;
-            text-align: center;
-            font-size: 1.1rem;
-            flex-shrink: 0; /* منع التصغير */
-        }
-
-        /* 2. العمود الأوسط: المعلومات (علم + اسم + شارة) */
-        .info-col {
-            flex-grow: 1; /* يأخذ كل المساحة المتبقية */
-            display: flex;
-            align-items: center;
-            padding: 0 10px;
-            overflow: hidden; /* لمنع الخروج عن النص */
-        }
-
+        .rank-col { width: 30px; text-align: center; font-size: 1.1rem; flex-shrink: 0; }
+        .info-col { flex-grow: 1; display: flex; align-items: center; padding: 0 10px; overflow: hidden; }
         .flag { font-size: 1.2rem; margin-left: 8px; flex-shrink: 0; }
-        
-        .name { 
-            white-space: nowrap; 
-            overflow: hidden; 
-            text-overflow: ellipsis; /* يضع ... إذا كان الاسم طويلاً جداً */
-            color: #2d3436;
-        }
-        
+        .name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #2d3436; }
         .badge { margin-right: 5px; font-size: 1.1rem; flex-shrink: 0; }
-
-        /* 3. العمود الأيسر: السكور */
-        .score-col {
-            width: 80px; /* عرض ثابت للسكور */
-            text-align: left; /* محاذاة لليسار الإنجليزي */
-            color: #0984e3;
-            font-family: monospace; /* خط رقمي */
-            font-size: 1.1rem;
-            flex-shrink: 0;
-        }
+        .score-col { width: 80px; text-align: left; color: #0984e3; font-family: monospace; font-size: 1.1rem; flex-shrink: 0; }
 
         /* الزر السري */
         #secret-btn {
@@ -170,22 +137,36 @@
         }
         #secret-btn:hover { opacity: 1; background: #fff; }
 
-        /* بانل الباسوورد */
+        /* بانل الباسوورد والتحكم */
         #secret-panel {
             display: none;
             position: fixed;
             top: 50%; left: 50%;
             transform: translate(-50%, -50%);
-            background: #333;
+            background: #2d3436;
             padding: 20px;
             border-radius: 10px;
             box-shadow: 0 0 20px rgba(0,0,0,0.5);
             text-align: center;
             z-index: 200;
+            color: white;
+            width: 300px;
         }
-        #secret-panel h4 { color: red; margin-top: 0; }
+        #secret-panel h4 { color: #ff7675; margin-top: 0; }
 
-        /* مؤشر التحميل */
+        /* منطقة الحذف (مخفية افتراضياً) */
+        #admin-area {
+            display: none;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #555;
+        }
+        #victim-name {
+            background: #ffe0e3;
+            color: #d63031;
+            border: 2px solid #d63031;
+        }
+
         #loading { font-size: 0.9rem; color: #888; margin-top: 10px; }
         
         #leaderboard::-webkit-scrollbar { width: 6px; }
@@ -240,15 +221,22 @@
         <h4>⚠️ منطقة محظورة ⚠️</h4>
         <input type="password" id="secret-pass" placeholder="كلمة السر">
         <br>
-        <button class="start-btn" onclick="activateHack()" style="font-size: 1rem; padding: 5px 20px;">تفعيل</button>
+        <button class="start-btn" onclick="checkCode()" style="font-size: 1rem; padding: 5px 20px;">تفعيل</button>
         <button class="start-btn" onclick="toggleSecret()" style="font-size: 1rem; padding: 5px 20px; background: #555;">إلغاء</button>
+        
+        <div id="admin-area">
+            <h4 style="color: #ff0000;">🗑️ طرد لاعب</h4>
+            <input type="text" id="victim-name" placeholder="اكتب اسم اللاعب بالضبط">
+            <button class="start-btn" onclick="deletePlayer()" style="background: red; font-size: 1rem;">حذف نهائي</button>
+        </div>
     </div>
 
     <img src="https://i.redd.it/8btmhq88z5s71.jpg" style="display:none;" alt="preload">
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-        import { getDatabase, ref, set, onValue, get, child } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+        // إضافة دالة remove من المكتبة
+        import { getDatabase, ref, set, onValue, get, child, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAIaiJoZMXLlcZaHDjzEvLw_CpqrB_3qjY",
@@ -279,9 +267,13 @@
         const audioSrc = "https://files.catbox.moe/vfo4tp.mp3";
         const audio = new Audio(audioSrc);
 
-        // --- دوال المنطقة السرية ---
+        // --- دوال المنطقة السرية والآدمن ---
         window.toggleSecret = function() {
             const panel = document.getElementById('secret-panel');
+            // إعادة تعيين الحقول عند الفتح/الإغلاق
+            document.getElementById('admin-area').style.display = 'none';
+            document.getElementById('secret-pass').value = '';
+            
             if (panel.style.display === 'block') {
                 panel.style.display = 'none';
             } else {
@@ -289,17 +281,45 @@
             }
         };
 
-        window.activateHack = function() {
+        window.checkCode = function() {
             const pass = document.getElementById('secret-pass').value;
+            
+            // كود السكور الخارق
             if (pass === "ARPS3MK") {
                 clickMultiplier = 1000;
-                alert("تم تفعيل الوضع الخارق! 🚀\nكل ضغطة = 1000 نقطة");
+                alert("تم تفعيل الوضع الخارق! 🚀");
                 document.getElementById('secret-panel').style.display = 'none';
-                document.getElementById('secret-pass').value = ""; 
                 scoreBoard.style.color = "#ffdd00"; 
                 scoreBoard.style.textShadow = "0 0 20px #ff0000";
-            } else {
+            } 
+            // كود المدير (الحذف)
+            else if (pass === "ARPSDEL") {
+                document.getElementById('admin-area').style.display = 'block';
+                alert("🔓 تم فتح لوحة المدير! \nيمكنك الآن حذف أي لاعب.");
+            } 
+            else {
                 alert("كلمة السر غلط! ❌");
+            }
+        };
+
+        // دالة الحذف الخاصة بالمدير
+        window.deletePlayer = function() {
+            const victimName = document.getElementById('victim-name').value.trim();
+            if(!victimName) {
+                alert("اكتب اسم اللاعب أولاً");
+                return;
+            }
+
+            if(confirm("هل أنت متأكد أنك تريد حذف اللاعب: " + victimName + " ؟\nلا يمكن التراجع عن هذا!")) {
+                // أمر الحذف من فايربيس
+                remove(ref(db, 'players/' + victimName))
+                .then(() => {
+                    alert("تم سحق اللاعب بنجاح! 🗑️");
+                    document.getElementById('victim-name').value = ""; // تفريغ الخانة
+                })
+                .catch((error) => {
+                    alert("حدث خطأ: " + error.message);
+                });
             }
         };
 
@@ -381,13 +401,18 @@
             catImg.src = "https://media.tenor.com/14kAeUwtoJoAAAAe/pop-cat.png";
         }
 
-        // --- الليدر بورد المعدل (Fix Layout) ---
+        // --- الليدر بورد ---
         const leaderboardList = document.getElementById('leaderboard-list');
         const playersRef = ref(db, 'players');
         
         onValue(playersRef, (snapshot) => {
             const data = snapshot.val();
-            if (!data) return;
+            
+            // إذا كانت الداتابيس فارغة (تم حذف الجميع)
+            if (!data) {
+                leaderboardList.innerHTML = "<div style='text-align:center; padding:10px;'>لا يوجد لاعبين</div>";
+                return;
+            }
 
             let playersArray = [];
             for (let key in data) {
@@ -409,7 +434,6 @@
                 const playerFlag = player.flag || "🏳️";
                 const rankBadge = getRankBadge(player.score);
 
-                // بناء الهيكل الجديد: (رتبة) -> (معلومات: علم، اسم، شارة) -> (سكور)
                 row.innerHTML = `
                     <div class="rank-col">${rankDisplay}</div>
                     
