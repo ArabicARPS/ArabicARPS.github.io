@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pop Cat Game</title>
+    <title>Pop Cat Battle</title>
     <style>
         body {
             margin: 0;
@@ -16,15 +16,54 @@
             justify-content: center;
             height: 100vh;
             user-select: none;
-            overflow: hidden; /* لمنع ظهور شريط تمرير */
+            overflow: hidden;
         }
 
+        /* شاشة الدخول */
+        #login-screen {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            color: white;
+        }
+
+        input[type="text"] {
+            padding: 15px;
+            font-size: 1.5rem;
+            border-radius: 10px;
+            border: none;
+            text-align: center;
+            margin-bottom: 20px;
+            width: 80%;
+            max-width: 300px;
+        }
+
+        button.start-btn {
+            padding: 10px 40px;
+            font-size: 1.5rem;
+            background: #ff4757;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+        button.start-btn:hover { background: #ff6b81; }
+
+        /* اللعبة */
         #score-board {
             font-size: 5rem;
             color: #ffffff;
             margin-bottom: 20px;
             font-weight: bold;
-            -webkit-text-stroke: 2px #000; /* حدود سوداء للنص */
+            -webkit-text-stroke: 2px #000;
+            text-shadow: 3px 3px 0 #000;
         }
 
         .cat-container {
@@ -34,21 +73,58 @@
         }
 
         #cat-img {
-            width: 350px; /* حجم القطة */
+            width: 350px;
             height: auto;
-            /* لضمان عدم اهتزاز الصورة عند التبديل */
             display: block; 
         }
 
-        p {
-            margin-top: 20px;
-            color: #333;
-            font-size: 1.2rem;
+        /* قائمة المتصدرين */
+        #leaderboard {
+            position: absolute;
+            top: 20px;
+            left: 20px; /* مكانها يسار الشاشة */
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px;
+            border-radius: 15px;
+            width: 250px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        #leaderboard h3 { margin: 0 0 10px 0; text-align: center; color: #333; }
+        
+        .player-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
             font-weight: bold;
         }
+
+        .player-row.current-user {
+            color: #ff4757; /* تمييز اسمك الحالي بلون مختلف */
+        }
+        
+        .rank { width: 30px; }
+        .name { flex-grow: 1; text-align: right; }
+        .score { color: #555; }
+
     </style>
 </head>
 <body>
+
+    <div id="login-screen">
+        <h1>أدخل اسمك يا بطل</h1>
+        <input type="text" id="nickname-input" placeholder="اكتب النيك نيم هنا..." maxlength="12">
+        <button class="start-btn" onclick="startGame()">ابدأ اللعب</button>
+    </div>
+
+    <div id="leaderboard">
+        <h3>🏆 الأبطال</h3>
+        <div id="leaderboard-list">
+            </div>
+    </div>
 
     <div id="score-board">0</div>
 
@@ -56,64 +132,147 @@
         <img id="cat-img" src="https://media.tenor.com/14kAeUwtoJoAAAAe/pop-cat.png" alt="Pop Cat">
     </div>
 
-    <p>اضغط للعب!</p>
-
     <img src="https://i.redd.it/8btmhq88z5s71.jpg" style="display:none;" alt="preload">
 
     <script>
+        // المتغيرات العامة
         let score = 0;
+        let currentUser = "";
+        let playersData = []; // هنا سنخزن كل اللاعبين
+
         const scoreBoard = document.getElementById('score-board');
         const catImg = document.getElementById('cat-img');
-        const catZone = document.getElementById('cat-zone');
+        const loginScreen = document.getElementById('login-screen');
+        const leaderboardList = document.getElementById('leaderboard-list');
 
-        // روابط الصور
+        // الروابط
         const closedMouthUrl = "https://media.tenor.com/14kAeUwtoJoAAAAe/pop-cat.png";
         const openMouthUrl = "https://i.redd.it/8btmhq88z5s71.jpg";
-
-        // رابط الصوت كما طلبته
-        // ملاحظة: قد يحظره المتصفح لأنه رابط محلي (Local File)
+        
+        // الصوت (انتبه لمسار الملف المحلي)
         const audioSrc = "file:///C:/Users/actc/OneDrive/Desktop/office/pop-402324.mp3";
         const audio = new Audio(audioSrc);
 
-        // دالة لفتح الفم
+        // === 1. دالة بدء اللعبة ===
+        function startGame() {
+            const inputName = document.getElementById('nickname-input').value.trim();
+            
+            if (inputName === "") {
+                alert("الرجاء كتابة اسم!");
+                return;
+            }
+
+            currentUser = inputName;
+            
+            // تحميل البيانات القديمة من المتصفح
+            loadData();
+
+            // البحث هل هذا اللاعب موجود مسبقاً؟
+            const existingPlayer = playersData.find(p => p.name === currentUser);
+            if (existingPlayer) {
+                score = existingPlayer.score; // استكمال السكور القديم
+            } else {
+                score = 0; // لاعب جديد
+                playersData.push({ name: currentUser, score: 0 });
+            }
+
+            // تحديث الشاشة
+            scoreBoard.innerText = score;
+            loginScreen.style.display = "none"; // إخفاء شاشة الدخول
+            updateLeaderboardDisplay();
+        }
+
+        // === 2. ميكانيكا اللعبة (Pop) ===
         function openMouth() {
+            if (!currentUser) return; // لا تعمل إذا لم يسجل الدخول
+
             score++;
             scoreBoard.innerText = score;
             catImg.src = openMouthUrl;
             
             // تشغيل الصوت
             audio.currentTime = 0;
-            audio.play().catch(e => console.log("قد يحتاج الصوت لتفاعل مسبق أو أن المسار المحلي محظور أمنياً"));
+            audio.play().catch(e => console.log("خطأ صوت"));
+
+            // تحديث سكور اللاعب الحالي في القائمة
+            const playerIndex = playersData.findIndex(p => p.name === currentUser);
+            if (playerIndex !== -1) {
+                playersData[playerIndex].score = score;
+            }
+
+            // حفظ وترتيب
+            saveData();
+            updateLeaderboardDisplay();
         }
 
-        // دالة لإغلاق الفم
         function closeMouth() {
             catImg.src = closedMouthUrl;
         }
 
-        // تفعيل الأحداث (للماوس واللمس)
-        // عند الضغط
-        document.addEventListener("mousedown", openMouth);
+        // === 3. التعامل مع البيانات (Save/Load) ===
+        function saveData() {
+            // ترتيب اللاعبين حسب السكور (من الأكبر للأصغر)
+            playersData.sort((a, b) => b.score - a.score);
+            // الحفظ في LocalStorage
+            localStorage.setItem('popcat_players', JSON.stringify(playersData));
+        }
+
+        function loadData() {
+            const storedData = localStorage.getItem('popcat_players');
+            if (storedData) {
+                playersData = JSON.parse(storedData);
+            }
+        }
+
+        // === 4. رسم الليدر بورد ===
+        function updateLeaderboardDisplay() {
+            leaderboardList.innerHTML = ""; // مسح القائمة الحالية
+
+            // عرض أعلى 10 لاعبين فقط
+            playersData.slice(0, 50).forEach((player, index) => {
+                const row = document.createElement('div');
+                row.className = `player-row ${player.name === currentUser ? 'current-user' : ''}`;
+                
+                // إضافة تاج للأول 👑
+                let rankDisplay = index + 1;
+                if (index === 0) rankDisplay = "👑";
+                else if (index === 1) rankDisplay = "🥈";
+                else if (index === 2) rankDisplay = "🥉";
+
+                row.innerHTML = `
+                    <span class="rank">${rankDisplay}</span>
+                    <span class="name">${player.name}</span>
+                    <span class="score">${player.score}</span>
+                `;
+                leaderboardList.appendChild(row);
+            });
+        }
+
+        // === 5. الأحداث (Events) ===
+        document.addEventListener("mousedown", (e) => {
+            if(e.target.closest('#login-screen') || e.target.closest('#leaderboard')) return;
+            openMouth();
+        });
+        
+        document.addEventListener("mouseup", closeMouth);
+
+        // دعم اللمس
         document.addEventListener("touchstart", function(e) {
-            e.preventDefault(); // منع التكبير
+             if(e.target.closest('#login-screen') || e.target.closest('#leaderboard')) return;
+            e.preventDefault();
             openMouth();
         }, {passive: false});
-
-        // عند رفع اليد
-        document.addEventListener("mouseup", closeMouth);
+        
         document.addEventListener("touchend", closeMouth);
 
-        // إضافة دعم للكيبورد (مثلاً زر المسافة)
-        document.addEventListener('keydown', function(event) {
-            if (event.code === 'Space') {
-                openMouth();
-            }
+        // زر Enter للدخول
+        document.getElementById('nickname-input').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') startGame();
         });
-        document.addEventListener('keyup', function(event) {
-            if (event.code === 'Space') {
-                closeMouth();
-            }
-        });
+
+        // تشغيل الليدر بورد عند فتح الصفحة لأول مرة (للعرض فقط)
+        loadData();
+        updateLeaderboardDisplay();
 
     </script>
 </body>
