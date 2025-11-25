@@ -81,44 +81,79 @@
             pointer-events: none;
         }
 
-        /* قائمة المتصدرين */
+        /* --- تنسيق الليدر بورد الجديد (حل المشكلة) --- */
         #leaderboard {
             position: absolute;
             top: 20px;
             left: 20px;
-            background: rgba(255, 255, 255, 0.9);
+            background: rgba(255, 255, 255, 0.95);
             padding: 15px;
             border-radius: 15px;
-            width: 300px; /* زيادة العرض لاستيعاب الجوائز */
+            width: 320px; /* عرض مناسب */
             box-shadow: 0 5px 15px rgba(0,0,0,0.2);
             max-height: 80vh;
             overflow-y: auto;
+            display: flex;
+            flex-direction: column;
         }
 
-        #leaderboard h3 { margin: 0 0 10px 0; text-align: center; color: #333; }
+        #leaderboard h3 { margin: 0 0 15px 0; text-align: center; color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px; }
         
+        /* تصميم السطر الواحد */
         .player-row {
             display: flex;
-            justify-content: space-between;
-            padding: 8px 0;
-            border-bottom: 1px solid #eee;
+            align-items: center; /* توسيط عمودي */
+            padding: 10px 5px;
+            border-bottom: 1px solid #f0f0f0;
             font-weight: bold;
-            align-items: center;
+            font-size: 1rem;
         }
 
+        /* سطر اللاعب الحالي */
         .player-row.current-user {
-            color: #ff4757;
+            color: #d63031;
             background-color: #ffe0e3;
-            border-radius: 5px;
-            padding: 8px 5px;
+            border-radius: 8px;
+            border: 1px solid #ff7675;
+        }
+
+        /* 1. العمود الأيمن: الترتيب */
+        .rank-col {
+            width: 30px;
+            text-align: center;
+            font-size: 1.1rem;
+            flex-shrink: 0; /* منع التصغير */
+        }
+
+        /* 2. العمود الأوسط: المعلومات (علم + اسم + شارة) */
+        .info-col {
+            flex-grow: 1; /* يأخذ كل المساحة المتبقية */
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            overflow: hidden; /* لمنع الخروج عن النص */
+        }
+
+        .flag { font-size: 1.2rem; margin-left: 8px; flex-shrink: 0; }
+        
+        .name { 
+            white-space: nowrap; 
+            overflow: hidden; 
+            text-overflow: ellipsis; /* يضع ... إذا كان الاسم طويلاً جداً */
+            color: #2d3436;
         }
         
-        .rank { width: 30px; }
-        /* تنسيق الاسم ليكون مرناً مع الأيقونات */
-        .name-container { flex-grow: 1; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; }
-        .flag { margin-left: 5px; font-size: 1.2rem; }
-        .badge { margin-right: 5px; font-size: 1.1rem; } /* تنسيق الشارة */
-        .score { color: #555; margin-right: 5px; font-size: 0.9rem;}
+        .badge { margin-right: 5px; font-size: 1.1rem; flex-shrink: 0; }
+
+        /* 3. العمود الأيسر: السكور */
+        .score-col {
+            width: 80px; /* عرض ثابت للسكور */
+            text-align: left; /* محاذاة لليسار الإنجليزي */
+            color: #0984e3;
+            font-family: monospace; /* خط رقمي */
+            font-size: 1.1rem;
+            flex-shrink: 0;
+        }
 
         /* الزر السري */
         #secret-btn {
@@ -268,15 +303,14 @@
             }
         };
 
-        // --- دالة تحديد الجوائز ---
         function getRankBadge(score) {
-            if (score >= 1000000) return "👑"; // مليون
-            if (score >= 100000) return "🦁"; // 100 ألف
-            if (score >= 50000) return "💎"; // 50 ألف
-            if (score >= 10000) return "🔥"; // 10 آلاف
-            if (score >= 5000) return "⚡"; // 5 آلاف
-            if (score >= 1000) return "🎖️"; // ألف
-            return ""; // أقل من ألف
+            if (score >= 1000000) return "👑";
+            if (score >= 100000) return "🦁";
+            if (score >= 50000) return "💎";
+            if (score >= 10000) return "🔥";
+            if (score >= 5000) return "⚡";
+            if (score >= 1000) return "🎖️";
+            return ""; 
         }
 
         // --- بدء اللعبة ---
@@ -347,7 +381,7 @@
             catImg.src = "https://media.tenor.com/14kAeUwtoJoAAAAe/pop-cat.png";
         }
 
-        // --- الليدر بورد مع الجوائز ---
+        // --- الليدر بورد المعدل (Fix Layout) ---
         const leaderboardList = document.getElementById('leaderboard-list');
         const playersRef = ref(db, 'players');
         
@@ -368,21 +402,24 @@
                 row.className = `player-row ${player.name === currentUser ? 'current-user' : ''}`;
                 
                 let rankDisplay = index + 1;
-                if (index === 0) rankDisplay = "👑";
+                if (index === 0) rankDisplay = "🥇";
                 else if (index === 1) rankDisplay = "🥈";
                 else if (index === 2) rankDisplay = "🥉";
 
                 const playerFlag = player.flag || "🏳️";
-                const rankBadge = getRankBadge(player.score); // حساب الشارة
+                const rankBadge = getRankBadge(player.score);
 
+                // بناء الهيكل الجديد: (رتبة) -> (معلومات: علم، اسم، شارة) -> (سكور)
                 row.innerHTML = `
-                    <div class="name-container">
-                        <span class="rank" style="min-width:25px;">${rankDisplay}</span>
+                    <div class="rank-col">${rankDisplay}</div>
+                    
+                    <div class="info-col">
                         <span class="flag">${playerFlag}</span>
-                        <span class="name" style="margin-right:5px; margin-left:5px;">${player.name}</span>
-                        <span class="badge">${rankBadge}</span>
+                        <span class="name">&nbsp;${player.name}</span>
+                        <span class="badge">&nbsp;${rankBadge}</span>
                     </div>
-                    <span class="score">${player.score}</span>
+
+                    <div class="score-col">${player.score}</div>
                 `;
                 leaderboardList.appendChild(row);
             });
