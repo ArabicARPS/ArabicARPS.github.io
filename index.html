@@ -3,47 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>لعبة القطوة</title>
+    <title>Pop Cat Game</title>
     <style>
         body {
             margin: 0;
             padding: 0;
-            background-color: #b9eaff; /* لون خلفية لطيف */
+            background-color: #b9eaff;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             height: 100vh;
-            user-select: none; /* لمنع تحديد النص عند النقر السريع */
+            user-select: none;
+            overflow: hidden; /* لمنع ظهور شريط تمرير */
         }
 
         #score-board {
-            font-size: 4rem;
-            color: #333;
+            font-size: 5rem;
+            color: #ffffff;
             margin-bottom: 20px;
             font-weight: bold;
-            text-shadow: 2px 2px 0px #fff;
+            -webkit-text-stroke: 2px #000; /* حدود سوداء للنص */
         }
 
         .cat-container {
             position: relative;
             cursor: pointer;
+            text-align: center;
         }
 
         #cat-img {
-            width: 300px; /* حجم القطة */
-            transition: transform 0.1s;
-        }
-
-        /* تأثير بسيط عند الضغط */
-        .cat-container:active #cat-img {
-            transform: scale(0.98);
+            width: 350px; /* حجم القطة */
+            height: auto;
+            /* لضمان عدم اهتزاز الصورة عند التبديل */
+            display: block; 
         }
 
         p {
             margin-top: 20px;
-            color: #555;
+            color: #333;
+            font-size: 1.2rem;
+            font-weight: bold;
         }
     </style>
 </head>
@@ -51,51 +52,67 @@
 
     <div id="score-board">0</div>
 
-    <div class="cat-container" onclick="pop()">
-        <img id="cat-img" src="cat-closed.png" alt="قطة مغلقة الفم">
+    <div class="cat-container" id="cat-zone">
+        <img id="cat-img" src="https://media.tenor.com/14kAeUwtoJoAAAAe/pop-cat.png" alt="Pop Cat">
     </div>
 
-    <p>اضغط على القطة لتسمع ميو!</p>
+    <p>اضغط للعب!</p>
+
+    <img src="https://i.redd.it/8btmhq88z5s71.jpg" style="display:none;" alt="preload">
 
     <script>
-        // تعريف المتغيرات
         let score = 0;
         const scoreBoard = document.getElementById('score-board');
         const catImg = document.getElementById('cat-img');
-        
-        // تجهيز الصوت (تأكد من وجود ملف صوتي اسمه meow.mp3)
-        const audio = new Audio('meow.mp3');
+        const catZone = document.getElementById('cat-zone');
 
-        // دالة الضغط
-        function pop() {
-            // 1. زيادة السكور
+        // روابط الصور
+        const closedMouthUrl = "https://media.tenor.com/14kAeUwtoJoAAAAe/pop-cat.png";
+        const openMouthUrl = "https://i.redd.it/8btmhq88z5s71.jpg";
+
+        // رابط الصوت كما طلبته
+        // ملاحظة: قد يحظره المتصفح لأنه رابط محلي (Local File)
+        const audioSrc = "file:///C:/Users/actc/OneDrive/Desktop/office/pop-402324.mp3";
+        const audio = new Audio(audioSrc);
+
+        // دالة لفتح الفم
+        function openMouth() {
             score++;
             scoreBoard.innerText = score;
-
-            // 2. تغيير الصورة إلى الفم المفتوح
-            catImg.src = 'cat-open.png';
-
-            // 3. تشغيل الصوت
-            audio.currentTime = 0; // إعادة الصوت للبداية للسماح بالتكرار السريع
-            audio.play();
-
-            // 4. إرجاع الصورة لوضع الإغلاق بعد وقت قصير جداً (100 ميلي ثانية)
-            setTimeout(() => {
-                catImg.src = 'cat-closed.png';
-            }, 100);
+            catImg.src = openMouthUrl;
+            
+            // تشغيل الصوت
+            audio.currentTime = 0;
+            audio.play().catch(e => console.log("قد يحتاج الصوت لتفاعل مسبق أو أن المسار المحلي محظور أمنياً"));
         }
 
-        // دعم اللمس للأجهزة المحمولة ليكون أسرع
-        document.addEventListener("mousedown", pop);
+        // دالة لإغلاق الفم
+        function closeMouth() {
+            catImg.src = closedMouthUrl;
+        }
+
+        // تفعيل الأحداث (للماوس واللمس)
+        // عند الضغط
+        document.addEventListener("mousedown", openMouth);
         document.addEventListener("touchstart", function(e) {
-            e.preventDefault(); // منع التكبير باللمس المزدوج
-            pop();
+            e.preventDefault(); // منع التكبير
+            openMouth();
+        }, {passive: false});
+
+        // عند رفع اليد
+        document.addEventListener("mouseup", closeMouth);
+        document.addEventListener("touchend", closeMouth);
+
+        // إضافة دعم للكيبورد (مثلاً زر المسافة)
+        document.addEventListener('keydown', function(event) {
+            if (event.code === 'Space') {
+                openMouth();
+            }
         });
-        document.addEventListener("mouseup", () => {
-            catImg.src = 'cat-closed.png';
-        });
-        document.addEventListener("touchend", () => {
-            catImg.src = 'cat-closed.png';
+        document.addEventListener('keyup', function(event) {
+            if (event.code === 'Space') {
+                closeMouth();
+            }
         });
 
     </script>
