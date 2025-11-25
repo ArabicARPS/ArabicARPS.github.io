@@ -32,7 +32,7 @@
             color: white;
         }
 
-        input[type="text"] {
+        input[type="text"], select {
             padding: 15px;
             font-size: 1.5rem;
             border-radius: 10px;
@@ -41,6 +41,7 @@
             margin-bottom: 20px;
             width: 80%;
             max-width: 300px;
+            font-family: 'Segoe UI', sans-serif;
         }
 
         button.start-btn {
@@ -70,7 +71,6 @@
             position: relative;
             cursor: pointer;
             text-align: center;
-            /* منع الصورة من السحب */
             -webkit-user-drag: none;
         }
 
@@ -78,7 +78,7 @@
             width: 350px;
             height: auto;
             display: block;
-            pointer-events: none; /* عشان الضغط يجي عالكونتينر مش الصورة */
+            pointer-events: none;
         }
 
         /* قائمة المتصدرين */
@@ -89,7 +89,7 @@
             background: rgba(255, 255, 255, 0.9);
             padding: 15px;
             border-radius: 15px;
-            width: 250px;
+            width: 280px; /* زيادة العرض قليلاً للأعلام */
             box-shadow: 0 5px 15px rgba(0,0,0,0.2);
             max-height: 80vh;
             overflow-y: auto;
@@ -103,6 +103,7 @@
             padding: 8px 0;
             border-bottom: 1px solid #eee;
             font-weight: bold;
+            align-items: center;
         }
 
         .player-row.current-user {
@@ -113,13 +114,14 @@
         }
         
         .rank { width: 30px; }
-        .name { flex-grow: 1; text-align: right; }
-        .score { color: #555; }
+        .name { flex-grow: 1; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .flag { margin-left: 5px; font-size: 1.2rem; }
+        .score { color: #555; margin-right: 5px;}
 
         /* مؤشر التحميل */
         #loading { font-size: 0.9rem; color: #888; margin-top: 10px; }
         
-        /* إخفاء شريط التمرير للقائمة */
+        /* سكرول بار */
         #leaderboard::-webkit-scrollbar { width: 6px; }
         #leaderboard::-webkit-scrollbar-thumb { background-color: #ccc; border-radius: 10px; }
 
@@ -129,6 +131,29 @@
 
     <div id="login-screen">
         <h1>Pop Cat Online 🌍</h1>
+        
+        <select id="flag-select">
+            <option value="🇵🇸">🇵🇸 فلسطين</option>
+            <option value="🇯🇴">🇯🇴 الأردن</option>
+            <option value="🇸🇦">🇸🇦 السعودية</option>
+            <option value="🇪🇬">🇪🇬 مصر</option>
+            <option value="🇮🇶">🇮🇶 العراق</option>
+            <option value="🇰🇼">🇰🇼 الكويت</option>
+            <option value="🇦🇪">🇦🇪 الإمارات</option>
+            <option value="🇶🇦">🇶🇦 قطر</option>
+            <option value="🇧🇭">🇧🇭 البحرين</option>
+            <option value="🇴🇲">🇴🇲 عُمان</option>
+            <option value="🇱🇧">🇱🇧 لبنان</option>
+            <option value="🇸🇾">🇸🇾 سوريا</option>
+            <option value="🇩🇿">🇩🇿 الجزائر</option>
+            <option value="🇲🇦">🇲🇦 المغرب</option>
+            <option value="🇹🇳">🇹🇳 تونس</option>
+            <option value="🇱🇾">🇱🇾 ليبيا</option>
+            <option value="🇸🇩">🇸🇩 السودان</option>
+            <option value="🇾🇪">🇾🇪 اليمن</option>
+            <option value="🌍">🌍 أخرى</option>
+        </select>
+
         <input type="text" id="nickname-input" placeholder="اكتب اسمك..." maxlength="12">
         <button class="start-btn" id="btn-start">دخول</button>
         <div id="loading">جاري الاتصال بالسيرفر...</div>
@@ -148,11 +173,10 @@
     <img src="https://i.redd.it/8btmhq88z5s71.jpg" style="display:none;" alt="preload">
 
     <script type="module">
-        // 1. استيراد مكتبات فايربيس
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
         import { getDatabase, ref, set, onValue, get, child } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-        // 2. إعدادات مشروعك
+        // إعدادات فايربيس (نفس إعداداتك)
         const firebaseConfig = {
             apiKey: "AIzaSyAIaiJoZMXLlcZaHDjzEvLw_CpqrB_3qjY",
             authDomain: "test-ae3a8.firebaseapp.com",
@@ -164,28 +188,28 @@
             measurementId: "G-ZPT9NCQZ7L"
         };
 
-        // 3. تشغيل فايربيس
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
         
-        // متغيرات اللعبة
         let currentUser = "";
+        let currentFlag = "🌍"; // العلم الافتراضي
         let currentScore = 0;
+        
         const scoreBoard = document.getElementById('score-board');
         const catImg = document.getElementById('cat-img');
         const loginScreen = document.getElementById('login-screen');
         const loadingText = document.getElementById('loading');
         
-        loadingText.innerText = "السيستم جاهز! اكتب اسمك.";
+        loadingText.innerText = "السيستم جاهز! اختر علمك واكتب اسمك.";
 
-        // --- إعداد الصوت الجديد ---
         const audioSrc = "https://files.catbox.moe/vfo4tp.mp3";
         const audio = new Audio(audioSrc);
 
         // --- دالة بدء اللعبة ---
         window.startGame = function() {
             const inputName = document.getElementById('nickname-input').value.trim();
-            // تنظيف الاسم (يمنع الرموز اللي تخرب الداتابيس)
+            const selectedFlag = document.getElementById('flag-select').value;
+            
             const safeName = inputName.replace(/[.#$/\[\]]/g, ""); 
 
             if (safeName === "") {
@@ -193,32 +217,37 @@
                 return;
             }
 
-            loadingText.innerText = "جاري جلب بياناتك...";
+            loadingText.innerText = "جاري الدخول...";
             currentUser = safeName;
+            currentFlag = selectedFlag;
 
-            // جلب السكور القديم إذا اللاعب موجود
             const dbRef = ref(getDatabase());
             get(child(dbRef, `players/${currentUser}`)).then((snapshot) => {
                 if (snapshot.exists()) {
                     currentScore = snapshot.val().score;
+                    // تحديث العلم في قاعدة البيانات في حال غيره اللاعب
+                    set(ref(db, 'players/' + currentUser), {
+                        name: currentUser,
+                        score: currentScore,
+                        flag: currentFlag
+                    });
                 } else {
                     currentScore = 0;
                     set(ref(db, 'players/' + currentUser), {
                         name: currentUser,
-                        score: 0
+                        score: 0,
+                        flag: currentFlag
                     });
                 }
                 
-                // بدء اللعب
                 scoreBoard.innerText = currentScore;
                 loginScreen.style.display = "none";
             }).catch((error) => {
                 console.error(error);
-                alert("تأكد من الإنترنت");
+                alert("مشكلة في الاتصال");
             });
         };
 
-        // ربط زر الدخول وانتر
         document.getElementById('btn-start').addEventListener('click', window.startGame);
         document.getElementById('nickname-input').addEventListener('keypress', function (e) {
             if (e.key === 'Enter') window.startGame();
@@ -232,14 +261,14 @@
             scoreBoard.innerText = currentScore;
             catImg.src = "https://i.redd.it/8btmhq88z5s71.jpg";
             
-            // تشغيل الصوت (مع إعادة التعيين للصفر للتكرار السريع)
             audio.currentTime = 0;
             audio.play().catch(e => {});
 
-            // حفظ السكور في السيرفر
+            // إرسال البيانات للسيرفر (الاسم + السكور + العلم)
             set(ref(db, 'players/' + currentUser), {
                 name: currentUser,
-                score: currentScore
+                score: currentScore,
+                flag: currentFlag
             });
         }
 
@@ -247,7 +276,7 @@
             catImg.src = "https://media.tenor.com/14kAeUwtoJoAAAAe/pop-cat.png";
         }
 
-        // --- تحديث الليدر بورد تلقائياً ---
+        // --- الليدر بورد ---
         const leaderboardList = document.getElementById('leaderboard-list');
         const playersRef = ref(db, 'players');
         
@@ -260,10 +289,8 @@
                 playersArray.push(data[key]);
             }
 
-            // الترتيب من الأكبر للأصغر
             playersArray.sort((a, b) => b.score - a.score);
 
-            // عرض القائمة
             leaderboardList.innerHTML = "";
             playersArray.slice(0, 50).forEach((player, index) => {
                 const row = document.createElement('div');
@@ -274,26 +301,27 @@
                 else if (index === 1) rankDisplay = "🥈";
                 else if (index === 2) rankDisplay = "🥉";
 
+                // التأكد من وجود علم، إذا لم يوجد نضع علم أبيض
+                const playerFlag = player.flag || "🏳️";
+
                 row.innerHTML = `
-                    <span class="rank">${rankDisplay}</span>
-                    <span class="name">${player.name}</span>
+                    <div style="display:flex; align-items:center;">
+                        <span class="rank">${rankDisplay}</span>
+                        <span class="flag">${playerFlag}</span>
+                        <span class="name" style="margin-right:5px;">${player.name}</span>
+                    </div>
                     <span class="score">${player.score}</span>
                 `;
                 leaderboardList.appendChild(row);
             });
         });
 
-        // --- أحداث اللمس والماوس ---
-        // استخدام 'pointerdown' لأنه يدعم الماوس واللمس معاً بشكل أسرع
         const catZone = document.getElementById('cat-zone');
-        
         catZone.addEventListener("pointerdown", (e) => {
-            e.preventDefault(); // يمنع التظليل
+            e.preventDefault();
             openMouth();
         });
-
         document.addEventListener("pointerup", closeMouth);
-        // للحماية من الحالات التي يخرج فيها الماوس من الشاشة
         document.addEventListener("pointercancel", closeMouth); 
         document.addEventListener("pointerleave", closeMouth);
 
