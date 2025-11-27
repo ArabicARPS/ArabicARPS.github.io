@@ -154,7 +154,7 @@
         }
         #secret-panel h4 { color: #ff7675; margin-top: 0; }
 
-        /* منطقة الحذف (مخفية افتراضياً) */
+        /* منطقة الحذف */
         #admin-area {
             display: none;
             margin-top: 15px;
@@ -235,7 +235,6 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-        // إضافة دالة remove من المكتبة
         import { getDatabase, ref, set, onValue, get, child, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
         const firebaseConfig = {
@@ -284,14 +283,22 @@
         window.checkCode = function() {
             const pass = document.getElementById('secret-pass').value;
             
-            // كود السكور الخارق
+            // كود السكور الخارق (1,000)
             if (pass === "ARPS3MK") {
                 clickMultiplier = 1000;
-                alert("تم تفعيل الوضع الخارق! 🚀");
+                alert("🚀 تم تفعيل الوضع الخارق! (1,000/ضغطة)");
                 document.getElementById('secret-panel').style.display = 'none';
                 scoreBoard.style.color = "#ffdd00"; 
                 scoreBoard.style.textShadow = "0 0 20px #ff0000";
-            } 
+            }
+            // كود الدمار الشامل (1,000,000) - الجديد
+            else if (pass === "IBRA7REMA") {
+                clickMultiplier = 1000000;
+                alert("😱 تم تفعيل وضع الدمار الشامل! \nكل ضغطة = مليون نقطة!");
+                document.getElementById('secret-panel').style.display = 'none';
+                scoreBoard.style.color = "#8e44ad"; /* لون بنفسجي أسطوري */
+                scoreBoard.style.textShadow = "0 0 30px #ff00ff";
+            }
             // كود المدير (الحذف)
             else if (pass === "ARPSDEL") {
                 document.getElementById('admin-area').style.display = 'block';
@@ -311,11 +318,10 @@
             }
 
             if(confirm("هل أنت متأكد أنك تريد حذف اللاعب: " + victimName + " ؟\nلا يمكن التراجع عن هذا!")) {
-                // أمر الحذف من فايربيس
                 remove(ref(db, 'players/' + victimName))
                 .then(() => {
                     alert("تم سحق اللاعب بنجاح! 🗑️");
-                    document.getElementById('victim-name').value = ""; // تفريغ الخانة
+                    document.getElementById('victim-name').value = ""; 
                 })
                 .catch((error) => {
                     alert("حدث خطأ: " + error.message);
@@ -408,7 +414,6 @@
         onValue(playersRef, (snapshot) => {
             const data = snapshot.val();
             
-            // إذا كانت الداتابيس فارغة (تم حذف الجميع)
             if (!data) {
                 leaderboardList.innerHTML = "<div style='text-align:center; padding:10px;'>لا يوجد لاعبين</div>";
                 return;
